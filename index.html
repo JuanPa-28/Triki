@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tres en Raya — XO Arena</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:      #0a0a0f;
+    --panel:   #12121a;
+    --border:  #1e1e2e;
+    --x-color: #ff3d6b;
+    --o-color: #00e5c4;
+    --neutral: #7a7a9a;
+    --text:    #e8e8f0;
+    --gold:    #ffd060;
+    --glow-x:  0 0 20px #ff3d6b88;
+    --glow-o:  0 0 20px #00e5c488;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 20%, #ff3d6b18 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 80% 80%, #00e5c415 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(#1e1e2e44 1px, transparent 1px),
+      linear-gradient(90deg, #1e1e2e44 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 960px;
+    padding: 24px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  header { text-align: center; }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--x-color) 0%, #ff8a50 40%, var(--o-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p { color: var(--neutral); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 4px; }
+
+  /* API URL config bar */
+  .api-bar {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid #ffd06055;
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .api-bar label { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.15em; white-space: nowrap; }
+  .api-bar input {
+    flex: 1;
+    min-width: 220px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    outline: none;
+  }
+  .api-bar input:focus { border-color: var(--gold); }
+  .api-status {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--neutral);
+    white-space: nowrap;
+  }
+  .api-status.ok  { color: #4ade80; }
+  .api-status.err { color: var(--x-color); }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    width: 100%;
+    align-items: start;
+  }
+
+  .side-panel { display: flex; flex-direction: column; gap: 14px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--neutral);
+    margin-bottom: 12px;
+  }
+
+  .user-input-row { display: flex; gap: 8px; align-items: center; }
+  input[type="text"] {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: var(--o-color); }
+  input[type="text"]::placeholder { color: var(--neutral); }
+
+  button { cursor: pointer; border: none; font-family: 'DM Mono', monospace; border-radius: 8px; transition: all 0.2s; }
+
+  .btn-sm { background: var(--border); color: var(--text); font-size: 0.7rem; letter-spacing: 0.1em; padding: 8px 14px; }
+  .btn-sm:hover { background: var(--o-color); color: #000; }
+
+  .current-user { font-size: 0.75rem; color: var(--o-color); margin-top: 8px; min-height: 18px; }
+
+  .difficulty-btns { display: flex; flex-direction: column; gap: 8px; }
+  .diff-btn {
+    width: 100%; padding: 10px;
+    font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--bg); border: 1px solid var(--border); color: var(--neutral);
+    border-radius: 8px; text-align: left;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .diff-btn .diff-icon { font-size: 1.1rem; }
+  .diff-btn.active-easy   { border-color: #4ade80; color: #4ade80; background: #4ade8010; }
+  .diff-btn.active-medium { border-color: var(--gold); color: var(--gold); background: #ffd06010; }
+  .diff-btn.active-hard   { border-color: var(--x-color); color: var(--x-color); background: #ff3d6b10; }
+  .diff-btn:hover { border-color: var(--text); color: var(--text); }
+
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .score-item { background: var(--bg); border-radius: 8px; padding: 10px; text-align: center; }
+  .score-label { font-size: 0.6rem; letter-spacing: 0.18em; color: var(--neutral); text-transform: uppercase; }
+  .score-value { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; line-height: 1.1; }
+  .score-x   { color: var(--x-color); }
+  .score-o   { color: var(--o-color); }
+  .score-tie { color: var(--neutral); }
+
+  .board-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+  .status-bar {
+    font-size: 0.8rem; letter-spacing: 0.1em; color: var(--neutral);
+    text-align: center; min-height: 22px; transition: color 0.3s;
+  }
+  .status-bar.win-x { color: var(--x-color); }
+  .status-bar.win-o { color: var(--o-color); }
+  .status-bar.tie   { color: var(--gold); }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  .cell {
+    width: 90px; height: 90px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .cell:hover:not(.taken) { border-color: var(--o-color); background: #00e5c408; }
+  .cell.taken { cursor: default; }
+  .cell.X { color: var(--x-color); text-shadow: var(--glow-x); }
+  .cell.O { color: var(--o-color); text-shadow: var(--glow-o); }
+  .cell.winning {
+    background: #ffffff08; border-color: var(--gold);
+    box-shadow: 0 0 18px #ffd06055;
+    animation: pulse-win 0.9s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse-win {
+    from { box-shadow: 0 0 10px #ffd06033; }
+    to   { box-shadow: 0 0 28px #ffd060aa; }
+  }
+
+  .cell-pop { animation: pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes pop {
+    0%   { transform: scale(0.4); opacity: 0.3; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+
+  .btn-new-game {
+    background: linear-gradient(135deg, var(--x-color), #ff7b54);
+    color: #fff; font-size: 0.8rem; letter-spacing: 0.15em;
+    text-transform: uppercase; padding: 12px 32px; border-radius: 40px;
+    box-shadow: var(--glow-x);
+  }
+  .btn-new-game:hover { transform: translateY(-2px); box-shadow: 0 0 30px #ff3d6b99; }
+  .btn-new-game:active { transform: scale(0.97); }
+
+  .turn-indicator { display: flex; align-items: center; gap: 10px; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--neutral); }
+  .turn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--neutral); transition: all 0.3s; }
+  .turn-dot.x-turn { background: var(--x-color); box-shadow: var(--glow-x); }
+  .turn-dot.o-turn { background: var(--o-color); box-shadow: var(--glow-o); }
+
+  .ranking-list, .history-list {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: 200px; overflow-y: auto;
+  }
+  .ranking-list::-webkit-scrollbar,
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .ranking-list::-webkit-scrollbar-thumb,
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .rank-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 36px 36px 44px;
+    gap: 4px; align-items: center;
+    padding: 7px 10px; background: var(--bg);
+    border-radius: 8px; font-size: 0.7rem;
+    border: 1px solid transparent; transition: border-color 0.2s;
+  }
+  .rank-row.highlight { border-color: var(--o-color); }
+  .rank-pos  { color: var(--neutral); text-align: center; }
+  .rank-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-wins { color: var(--o-color); text-align: right; }
+  .rank-loss { color: var(--x-color); text-align: right; }
+  .rank-rate { color: var(--gold); text-align: right; font-size: 0.62rem; }
+  .rank-empty { color: var(--neutral); font-size: 0.7rem; text-align: center; padding: 20px; }
+
+  .history-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--bg); border-radius: 6px; font-size: 0.68rem; color: var(--neutral); }
+  .history-result.W { color: var(--o-color); }
+  .history-result.L { color: var(--x-color); }
+  .history-result.T { color: var(--gold); }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: #0a0a0fcc; backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 20px;
+    padding: 32px 40px; text-align: center; max-width: 340px; width: 90%;
+    transform: translateY(20px) scale(0.95); transition: transform 0.3s;
+  }
+  .modal-overlay.show .modal-box { transform: translateY(0) scale(1); }
+  .modal-emoji { font-size: 3.5rem; margin-bottom: 12px; }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .modal-title.x-win { color: var(--x-color); }
+  .modal-title.o-win { color: var(--o-color); }
+  .modal-title.tie   { color: var(--gold); }
+  .modal-sub { color: var(--neutral); font-size: 0.78rem; margin-bottom: 24px; }
+  .modal-box .btn-new-game { width: 100%; }
+
+  .ai-thinking { display: none; align-items: center; gap: 8px; font-size: 0.7rem; color: var(--o-color); letter-spacing: 0.1em; }
+  .ai-thinking.visible { display: flex; }
+  .dot-anim span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--o-color); animation: blink 1.2s infinite; }
+  .dot-anim span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-anim span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100% { opacity:0.2; transform:scale(0.8); } 40% { opacity:1; transform:scale(1.2); } }
+
+  @media (max-width: 720px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .side-panel { flex-direction: row; flex-wrap: wrap; }
+    .side-panel .card { flex: 1 1 140px; }
+    .cell { width: 72px; height: 72px; font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <h1>XO ARENA</h1>
+    <p>Tres en Raya · IA Adaptativa · MySQL + PHP</p>
+  </header>
+
+  <!-- Barra de configuración de la API -->
+  <div class="api-bar">
+    <label>▸ URL DE TU API:</label>
+    <input type="text" id="apiUrl" value="http://localhost/xo_arena/api.php" placeholder="http://tu-servidor/xo_arena/api.php">
+    <button class="btn-sm" onclick="testApi()">Probar</button>
+    <span class="api-status" id="apiStatus">Sin verificar</span>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- IZQUIERDA -->
+    <div class="side-panel">
+      <div class="card">
+        <div class="card-title">▸ Jugador</div>
+        <div class="user-input-row">
+          <input type="text" id="usernameInput" placeholder="Tu nombre…" maxlength="20">
+          <button class="btn-sm" onclick="loginUser()">OK</button>
+        </div>
+        <div class="current-user" id="currentUserDisplay"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">▸ Dificultad</div>
+        <div class="difficulty-btns">
+          <button class="diff-btn active-easy" id="btn-easy" onclick="setDifficulty('easy')">
+            <span class="diff-icon">🟢</span> Fácil — aleatorio
+          </button>
+          <button class="diff-btn" id="btn-medium" onclick="setDifficulty('medium')">
+            <span class="diff-icon">🟡</span> Medio — estratégico
+          </button>
+          <button class="diff-btn" id="btn-hard" onclick="setDifficulty('hard')">
+            <span class="diff-icon">🔴</span> Difícil — minimax
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">▸ Sesión actual</div>
+        <div class="score-grid">
+          <div class="score-item">
+            <div class="score-label">Tú (X)</div>
+            <div class="score-value score-x" id="scorePlayer">0</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">IA (O)</div>
+            <div class="score-value score-o" id="scoreAI">0</div>
+          </div>
+          <div class="score-item" style="grid-column:1/3;">
+            <div class="score-label">Empates</div>
+            <div class="score-value score-tie" id="scoreTie">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTRO -->
+    <div class="board-col">
+      <div class="status-bar" id="statusBar">Ingresa tu nombre para comenzar</div>
+      <div class="board" id="board"></div>
+      <div class="ai-thinking" id="aiThinking">
+        <div class="dot-anim"><span></span><span></span><span></span></div>
+        IA pensando…
+      </div>
+      <div class="turn-indicator">
+        <div class="turn-dot" id="turnDot"></div>
+        <span id="turnText">—</span>
+      </div>
+      <button class="btn-new-game" onclick="newGame()">Nueva Partida</button>
+    </div>
+
+    <!-- DERECHA -->
+    <div class="side-panel">
+      <div class="card">
+        <div class="card-title">▸ Ranking Global (MySQL)</div>
+        <div class="ranking-list" id="rankingList">
+          <div class="rank-empty">Conecta la API para ver el ranking</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">▸ Mi Historial</div>
+        <div class="history-list" id="historyList">
+          <div class="rank-empty">Sin historial aún</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">▸ Mis Stats Totales</div>
+        <div class="score-grid">
+          <div class="score-item">
+            <div class="score-label">Victorias</div>
+            <div class="score-value score-o" id="totalWins">—</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">Derrotas</div>
+            <div class="score-value score-x" id="totalLosses">—</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">Empates</div>
+            <div class="score-value score-tie" id="totalTies">—</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">Partidas</div>
+            <div class="score-value" id="totalGames">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-emoji" id="modalEmoji"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-sub"   id="modalSub"></div>
+    <button class="btn-new-game" onclick="closeModal(); newGame();">Jugar de nuevo</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  API — comunicación con el backend PHP
+// ════════════════════════════════════════════════
+function getApiUrl() {
+  return document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+}
+
+async function apiGet(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const res = await fetch(`${getApiUrl()}?${qs}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiPost(action, body = {}) {
+  const res = await fetch(`${getApiUrl()}?action=${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function testApi() {
+  const el = document.getElementById('apiStatus');
+  el.className = 'api-status';
+  el.textContent = 'Probando…';
+  try {
+    const data = await apiGet('ranking', { limit: 1 });
+    if (data.success !== undefined) {
+      el.className = 'api-status ok';
+      el.textContent = '✓ Conectado';
+      updateRanking();
+    }
+  } catch (e) {
+    el.className = 'api-status err';
+    el.textContent = '✗ Sin conexión';
+  }
+}
+
+// ════════════════════════════════════════════════
+//  ESTADO DEL JUEGO
+// ════════════════════════════════════════════════
+let board       = Array(9).fill(null);
+let currentTurn = 'X';
+let gameOver    = false;
+let difficulty  = 'easy';
+
+let sessionWins = 0, sessionLosses = 0, sessionTies = 0;
+let currentUser = null; // { id, name }
+
+// ════════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════════
+async function loginUser() {
+  const name = document.getElementById('usernameInput').value.trim();
+  if (!name) return;
+  try {
+    const data = await apiGet('login', { name });
+    if (!data.success) throw new Error(data.error);
+    currentUser = { id: data.player.id, name: data.player.name };
+    document.getElementById('currentUserDisplay').textContent = `✓ Hola, ${currentUser.name}!`;
+    document.getElementById('usernameInput').value = '';
+    sessionWins = sessionLosses = sessionTies = 0;
+    updateSessionScore();
+    await Promise.all([updateUserStats(), updateHistory(), updateRanking()]);
+    newGame();
+  } catch(e) {
+    document.getElementById('currentUserDisplay').textContent = '✗ Error: ' + e.message;
+  }
+}
+
+// ════════════════════════════════════════════════
+//  DIFICULTAD
+// ════════════════════════════════════════════════
+function setDifficulty(d) {
+  difficulty = d;
+  ['easy','medium','hard'].forEach(x => {
+    document.getElementById(`btn-${x}`).className =
+      `diff-btn${d === x ? ` active-${x}` : ''}`;
+  });
+  if (currentUser && !gameOver) newGame();
+}
+
+// ════════════════════════════════════════════════
+//  TABLERO
+// ════════════════════════════════════════════════
+function buildBoard() {
+  const c = document.getElementById('board');
+  c.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.idx = i;
+    cell.onclick = () => playerMove(i);
+    c.appendChild(cell);
+  }
+}
+
+function renderBoard(winCells = []) {
+  document.querySelectorAll('.cell').forEach((cell, i) => {
+    cell.textContent = board[i] || '';
+    cell.className = 'cell' +
+      (board[i] ? ` taken ${board[i]}` : '') +
+      (winCells.includes(i) ? ' winning' : '');
+  });
+}
+
+// ════════════════════════════════════════════════
+//  MECÁNICA
+// ════════════════════════════════════════════════
+function newGame() {
+  board = Array(9).fill(null);
+  currentTurn = 'X';
+  gameOver = false;
+  buildBoard(); renderBoard();
+  showAIThinking(false); closeModal();
+  if (currentUser) { setStatus('Tu turno — Juega X', ''); setTurn('X'); }
+  else setStatus('Ingresa tu nombre para comenzar', '');
+}
+
+function playerMove(idx) {
+  if (!currentUser || gameOver || currentTurn !== 'X' || board[idx]) return;
+  board[idx] = 'X';
+  renderBoard(); animateCell(idx);
+  const r = checkWin();
+  if (r) { endGame(r); return; }
+  currentTurn = 'O';
+  setStatus('IA piensa…', ''); setTurn('O'); showAIThinking(true);
+  setTimeout(() => {
+    aiMove(); showAIThinking(false);
+    const r2 = checkWin();
+    if (r2) { endGame(r2); return; }
+    currentTurn = 'X'; setStatus('Tu turno — Juega X', ''); setTurn('X');
+  }, difficulty === 'hard' ? 600 : 400);
+}
+
+// ════════════════════════════════════════════════
+//  IA
+// ════════════════════════════════════════════════
+function aiMove() {
+  const idx = difficulty === 'easy' ? aiEasy()
+            : difficulty === 'medium' ? aiMedium() : aiHard();
+  board[idx] = 'O';
+  renderBoard(); animateCell(idx);
+}
+
+function aiEasy() {
+  const empty = board.map((v,i) => v===null?i:-1).filter(i=>i>=0);
+  return empty[Math.floor(Math.random()*empty.length)];
+}
+
+function aiMedium() {
+  const w = findBestMove('O'); if (w!==-1) return w;
+  const b = findBestMove('X'); if (b!==-1) return b;
+  if (!board[4]) return 4;
+  const corners = [0,2,6,8].filter(i=>!board[i]);
+  if (corners.length) return corners[Math.floor(Math.random()*corners.length)];
+  return aiEasy();
+}
+
+function findBestMove(p) {
+  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for (const [a,b,c] of lines) {
+    const v=[board[a],board[b],board[c]];
+    if (v.filter(x=>x===p).length===2 && v.includes(null))
+      return [a,b,c][v.indexOf(null)];
+  }
+  return -1;
+}
+
+function aiHard() {
+  let best=-Infinity, bestIdx=-1;
+  board.forEach((v,i)=>{
+    if (v) return;
+    board[i]='O';
+    const s=minimax(board,0,false,-Infinity,Infinity);
+    board[i]=null;
+    if (s>best) { best=s; bestIdx=i; }
+  });
+  return bestIdx;
+}
+
+function minimax(b,depth,isMax,alpha,beta) {
+  const w=evalBoard(b);
+  if (w!==0 || b.every(v=>v)) return w;
+  if (isMax) {
+    let best=-Infinity;
+    for (let i=0;i<9;i++) { if (b[i]) continue; b[i]='O'; best=Math.max(best,minimax(b,depth+1,false,alpha,beta)); b[i]=null; alpha=Math.max(alpha,best); if (beta<=alpha) break; }
+    return best;
+  } else {
+    let best=Infinity;
+    for (let i=0;i<9;i++) { if (b[i]) continue; b[i]='X'; best=Math.min(best,minimax(b,depth+1,true,alpha,beta)); b[i]=null; beta=Math.min(beta,best); if (beta<=alpha) break; }
+    return best;
+  }
+}
+
+function evalBoard(b) {
+  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for (const [a,bI,c] of lines)
+    if (b[a] && b[a]===b[bI] && b[a]===b[c]) return b[a]==='O'?10:-10;
+  return 0;
+}
+
+// ════════════════════════════════════════════════
+//  RESULTADO
+// ════════════════════════════════════════════════
+function checkWin() {
+  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for (const line of lines) {
+    const [a,b,c]=line;
+    if (board[a] && board[a]===board[b] && board[a]===board[c])
+      return {winner:board[a], cells:line};
+  }
+  if (board.every(v=>v)) return {winner:'TIE', cells:[]};
+  return null;
+}
+
+async function endGame({winner, cells}) {
+  gameOver = true;
+  renderBoard(cells);
+  showAIThinking(false);
+
+  let result, emoji, title, sub, cls;
+  if (winner==='X') {
+    result='W'; emoji='🏆'; cls='x-win'; title='¡Ganaste!';
+    sub=`Venciste a la IA en nivel ${diffLabel()}`;
+    sessionWins++;
+  } else if (winner==='O') {
+    result='L'; emoji='🤖'; cls='o-win'; title='IA Gana';
+    sub=`La IA te venció en nivel ${diffLabel()}`;
+    sessionLosses++;
+  } else {
+    result='T'; emoji='🤝'; cls='tie'; title='Empate';
+    sub='Nadie gana… pero nadie pierde';
+    sessionTies++;
+  }
+
+  updateSessionScore();
+  setStatus(title, cls);
+
+  // Guardar en MySQL
+  if (currentUser) {
+    try {
+      await apiPost('save_game', {
+        player_id: currentUser.id,
+        result,
+        difficulty
+      });
+      await Promise.all([updateUserStats(), updateHistory(), updateRanking()]);
+    } catch(e) {
+      console.warn('No se pudo guardar en la BD:', e.message);
+    }
+  }
+
+  setTimeout(() => showModal(emoji, title, sub, cls), 700);
+}
+
+function diffLabel() {
+  return {easy:'Fácil', medium:'Medio', hard:'Difícil'}[difficulty];
+}
+
+// ════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════
+function setStatus(msg, cls) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  el.className = `status-bar ${cls}`;
+}
+function setTurn(player) {
+  document.getElementById('turnDot').className = `turn-dot ${player==='X'?'x':'o'}-turn`;
+  document.getElementById('turnText').textContent = player==='X'?'Tu turno (X)':'Turno IA (O)';
+}
+function showAIThinking(show) {
+  document.getElementById('aiThinking').classList.toggle('visible', show);
+}
+function animateCell(idx) {
+  const c = document.querySelectorAll('.cell')[idx];
+  c.classList.remove('cell-pop');
+  void c.offsetWidth;
+  c.classList.add('cell-pop');
+}
+function updateSessionScore() {
+  document.getElementById('scorePlayer').textContent = sessionWins;
+  document.getElementById('scoreAI').textContent     = sessionLosses;
+  document.getElementById('scoreTie').textContent    = sessionTies;
+}
+
+async function updateUserStats() {
+  if (!currentUser) return;
+  try {
+    const data = await apiGet('stats', { player_id: currentUser.id });
+    if (!data.success) return;
+    document.getElementById('totalWins').textContent   = data.stats.wins;
+    document.getElementById('totalLosses').textContent = data.stats.losses;
+    document.getElementById('totalTies').textContent   = data.stats.ties;
+    document.getElementById('totalGames').textContent  = data.stats.total;
+  } catch(e) {}
+}
+
+async function updateHistory() {
+  if (!currentUser) return;
+  try {
+    const data = await apiGet('history', { player_id: currentUser.id });
+    if (!data.success) return;
+    const c = document.getElementById('historyList');
+    if (!data.history.length) { c.innerHTML = '<div class="rank-empty">Sin historial aún</div>'; return; }
+    const labels = {W:'Victoria', L:'Derrota', T:'Empate'};
+    const diffs  = {easy:'Fácil', medium:'Medio', hard:'Difícil'};
+    c.innerHTML = data.history.map(h =>
+      `<div class="history-row">
+        <span class="history-result ${h.result}">${labels[h.result]}</span>
+        <span>${diffs[h.difficulty] || h.difficulty}</span>
+      </div>`
+    ).join('');
+  } catch(e) {}
+}
+
+async function updateRanking() {
+  try {
+    const data = await apiGet('ranking');
+    if (!data.success) return;
+    const c = document.getElementById('rankingList');
+    if (!data.ranking.length) { c.innerHTML = '<div class="rank-empty">Nadie en el ranking aún</div>'; return; }
+    const medals = ['🥇','🥈','🥉'];
+    c.innerHTML = data.ranking.map((r, i) => {
+      const isMe = currentUser && r.name === currentUser.name;
+      return `<div class="rank-row${isMe?' highlight':''}">
+        <span class="rank-pos">${medals[i] || i+1}</span>
+        <span class="rank-name" title="${r.name}">${r.name}</span>
+        <span class="rank-wins">${r.wins}W</span>
+        <span class="rank-loss">${r.losses}L</span>
+        <span class="rank-rate">${r.win_rate}%</span>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function showModal(emoji, title, sub, cls) {
+  document.getElementById('modalEmoji').textContent = emoji;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalTitle').className   = `modal-title ${cls}`;
+  document.getElementById('modalSub').textContent   = sub;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+buildBoard();
+testApi();
+</script>
+</body>
+</html>
